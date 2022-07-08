@@ -270,3 +270,37 @@ def classical_design(
         B_star.append(np.matmul(J * x_star + _b, P_star))
 
     return np.asarray(B_star, dtype=float)
+
+
+def radial_design(
+    num_params: int,
+    num_trajectories: int,
+    base_points: NDArray[np.floating],
+    incremental_points: Generator[NDArray[np.floating], None, None],
+    min_distance: float = 0.0,
+):
+    """Define a generic strategy for radial-like trajectory designs."""
+    # Helper function to evaluate the distance between two points. If a
+    # minimal distance is defined, it will only be used incremental
+    # points that introduce a perturbation greater than the minimal
+    # distance. If no minimal distance is defined, the helper function
+    # always return the next incremental points in line.
+    def increment(index: int) -> NDArray[np.floating]:
+        while np.allclose(
+            base_points[index],
+            inc := next(incremental_points),
+            atol=min_distance,
+        ):
+            pass
+
+        return inc
+
+    J = np.ones((num_params + 1, num_params))
+    B = np.eye(num_params + 1, num_params, k=-1)
+
+    return np.asfarray(
+        [
+            base_points[x] * (J - B) + increment(x) * B
+            for x in range(num_trajectories)
+        ]
+    )
