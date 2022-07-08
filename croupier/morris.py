@@ -1,0 +1,272 @@
+# coding: utf-8
+"""Define sampling strategies for the Elementary Effects Method."""
+
+from typing import Generator
+
+import numba
+import numpy as np
+from numpy.typing import NDArray
+
+
+def _delta(num_levels: int) -> float:
+    """Compute the increment (delta) based on the number of levels.
+
+    Parameters
+    ----------
+    num_levels : int
+        The desired number of equally spaced increment levels.
+
+    Returns
+    -------
+    float
+        The increment level.
+
+    Raises
+    ------
+    ValueError
+        The number of increment levels should be greater than zero.
+    RuntimeError
+        The number of increment levels is odd. It has been already
+        proven that an even number is better, providing an uniform
+        distribution of the initial base values.
+    """
+    if num_levels <= 1:
+        raise ValueError(
+            "The number of increment levels should be greater than one."
+        )
+
+    if num_levels % 2 != 0:
+        raise RuntimeError(
+            "Although an odd number of levels could be"
+            " accepted, an even number is proven to be a"
+            " better choice."
+        )
+
+    return num_levels / (2.0 * (num_levels - 1))
+
+
+@numba.njit(parallel=True)
+def _euclidian_distance_matrix(
+    trajectories: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Compute the euclidian distance between any two trajectories.
+
+    Parameters
+    ----------
+    trajectories : np.ndarray
+        The array of trajectories.
+
+    Returns
+    -------
+    np.ndarray
+        The distance matrix, which stores the euclidian distance in the upper
+        triangular matrix and the squared euclidian distance in the lower
+        triangular matrix. The indices (i, j) represent the distance between
+        trajectories i and j.
+    """
+    # Get the total number of trajectories.
+    num_trajectories = trajectories.shape[0]
+
+    # Initialize the distance matrix with zeros.
+    d = np.zeros((num_trajectories, num_trajectories))
+
+    # Get all possible combinations of trajectories.
+    m_indices, l_indices = np.triu_indices_from(d, k=1)
+
+    # Loop through all combinations
+    for i in numba.prange(m_indices.shape[0]):
+        _m, _l = m_indices[i], l_indices[i]
+
+        # Compute the euclidian distance between trajectories _m and _l, and
+        # store the result in the upper triangular matrix.
+        d[_m, _l] = np.sqrt(
+            np.square(trajectories[_m] - trajectories[_l]).sum(axis=1)
+        ).sum()
+
+        # Square the euclidian distance between _m and _l, and store the result
+        # in the lower triangular matrix.
+        d[_l, _m] = d[_m, _l] * d[_m, _l]
+
+    # Return the distance matrix containing both the euclidian distance in the
+    # upper triangular matrix and the squared euclidian distance in the lower
+    # triangular matrix. Even though the method proposed by Campolong et. al.
+    # only uses the squared euclidian distance from now on, the function
+    # returns both values, envisioning future usage.
+    return d
+
+
+@numba.njit(parallel=True)
+def _subset_distance(
+    distance_matrix: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Compute all subsets distances to the original set of distances.
+
+    Following the method proposed by Ge
+
+    Parameters
+    ----------
+    distance_matrix : np.ndarray
+        The distance matrix or the original set.
+
+    Returns
+    -------
+    np.ndarray
+        A one-dimensional array of the distance of all subsets to the
+        original matrix.
+    """
+    # Get the number of possible subsets.
+    num_subsets = distance_matrix.shape[0]
+
+    # Initialize the subset distance matrix with zeros.
+    Ds_p = np.zeros(num_subsets)
+
+    # Compute the influence
+    for i in numba.prange(num_subsets):
+        # Initiate a null matrix for using as maked indices.
+        masked_indices = np.zeros((num_subsets, num_subsets))
+
+        # Select the row and column corresponding to i, and set
+        # the value to one.
+        for j in numba.prange(i):
+            masked_indices[i, j] = 1
+
+        for j in numba.prange(i + 1, num_subsets):
+            masked_indices[j, i] = 1
+
+        # Compute the subset distance.
+        Ds_p[i] = (distance_matrix * masked_indices).sum()
+
+    return Ds_p
+
+
+@numba.njit(parallel=False)
+def quasi_optimized_trajectories(
+    trajectories: NDArray[np.floating], num_qot: int
+) -> NDArray[np.floating]:
+    """Find the set of quasi-optimal trajectories.
+
+    Parameters
+    ----------
+    trajectory : np.ndarray
+        A set of randomly generated trajectories.
+    num_qot : int
+        The number of quasi-optimized trajectories to be selected out of
+        the original set of randomly generated trajectories.
+
+    Returns
+    -------
+    np.ndarray
+        The set of quasi-optimized trajectories.
+    """
+    # The number of randomly generated trajectories.
+    num_trajectories = trajectories.shape[0]
+
+    # The necessary number of iterations.
+    num_iterations = num_trajectories - num_qot
+    if num_iterations <= 0:
+        raise ValueError(
+            "The given set of trajectories is smaller than the"
+            " desired number of quasi-optimized trajectories."
+        )
+
+    # Index of the trajectory that is to be deleted.
+    to_delete = 0
+
+    # Compute the distance matrix and the subset
+    Ds = _euclidian_distance_matrix(trajectories)
+    Ds_p = _subset_distance(Ds)
+
+    # The following for-loop cannot be executed in parallel.
+    for _ in numba.prange(num_iterations):
+        # Select the trajectory that contributes the less to the total
+        # distance, and mark it to be deleted.
+        to_delete = np.where(Ds_p == Ds_p.min())[0][0]
+
+        # Deduct the contribution of the least influential trajectory on the
+        # subset distance of other trajectories.
+        for j in numba.prange(to_delete):
+            Ds_p[j] = Ds_p[j] - Ds[to_delete, j]
+
+        for j in numba.prange(to_delete + 1, Ds_p.shape[0]):
+            Ds_p[j] = Ds_p[j] - Ds[j, to_delete]
+
+        # Remove the least influential trajectory from the distance matrix
+        Ds = np.vstack((Ds[:to_delete], Ds[to_delete + 1 :]))
+        Ds = np.hstack((Ds[:, :to_delete], Ds[:, to_delete + 1 :]))
+
+        # Remove the least influential trajectory from the subset distance matrix.
+        Ds_p = np.hstack((Ds_p[:to_delete], Ds_p[to_delete + 1 :]))
+
+        # Exclude the least influential trajectory from the list of trajectories.
+        trajectories = np.vstack(
+            (trajectories[:to_delete], trajectories[to_delete + 1 :])
+        )
+
+    return trajectories
+
+
+def classical_design(
+    num_params: int, num_levels: int, num_trajectories: int = 1
+) -> NDArray[np.floating]:
+    """Generate a design matrix following the classical approach.
+
+    Parameters
+    ----------
+    num_params : int
+        The number of parameters (k) defining the problem.
+    num_levels : int
+        The number of equally spaced increment levels (p).
+    num_trajectories : int
+        The number of trajectories (N) to be generated.
+
+    Returns
+    -------
+    np.ndarray
+        The design matrix.
+
+    Notes
+    -----
+    The implementation is based on the comments found in the 3rd Chapter
+    of [1].
+
+    [1] Saltelli, A., Ratto, M., Andres, T., Campolongo, F., Cariboni,
+        J., Gatelli, D., Saisana, M., & Tarantola, S. (2008). Global
+        sensitivity analysis: The primer. John Wiley.
+    """
+    # Compute the increment delta based on the number of levels (p).
+    delta = _delta(num_levels)
+
+    # A (k+1)-by-k matrix of zeros and ones, in which there are only two rows
+    # that differ in the jth element. A convenient choice for B is a strictly
+    # lower triangular matrix of ones.
+    B = np.tril(np.ones((num_params + 1, num_params)), -1)
+
+    # A simple (k+1)-by-k matrix of ones.
+    J = np.ones((num_params + 1, num_params))
+
+    # Generate the design matrix of N trajectories.
+    B_star = []
+    for _ in range(num_trajectories):
+        # Generate a randomly chosen base value.
+        x_star = np.random.choice(
+            np.linspace(0, 1 - delta, int(num_levels / 2)), num_params
+        )
+
+        # A k-dimensional diagonal matrix in which each element is either +1 or
+        # -1 with equal probability. It states whether the factors will
+        # increase or decrease along the trajectory.
+        D_star = np.diag(np.random.choice([-1, 1], num_params))
+
+        # A k-by-k random permutation matrix in which each row contains one
+        # element equal to 1, all others are 0, and no two rows have ones in
+        # the same columns. The matrix gives the order in which factors are
+        # moved by shuffling the values of an identity matrix of size k-by-k.
+        np.random.shuffle(P_star := np.eye(num_params, num_params))
+
+        # Compute the random permutation matrix.
+        _b = (delta / 2) * ((2 * B - J) @ D_star + J)
+
+        # Append the trajectory to the design matrix.
+        B_star.append(np.matmul(J * x_star + _b, P_star))
+
+    return np.asarray(B_star, dtype=float)
