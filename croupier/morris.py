@@ -206,7 +206,12 @@ def quasi_optimized_trajectories(
 
 
 def classical_design(
-    num_params: int, num_levels: int, num_trajectories: int = 1
+    num_params: int,
+    num_levels: int,
+    num_trajectories: int = 1,
+    unique: bool = True,
+    seed: int = -1,
+    max_retries: int = 10000,
 ) -> NDArray[np.floating]:
     """Generate a design matrix following the classical approach.
 
@@ -216,8 +221,15 @@ def classical_design(
         The number of parameters (k) defining the problem.
     num_levels : int
         The number of equally spaced increment levels (p).
-    num_trajectories : int
+    num_trajectories : int, optional
         The number of trajectories (N) to be generated.
+    unique : bool, optional
+        Only return unique trajectories.
+    seed : int, optional
+        Reseed a legacy MT19937 BitGenerator.
+    max_retries: int, optional
+        The maximum number of retries when generating a set of unique
+        trajectories.
 
     Returns
     -------
@@ -233,6 +245,22 @@ def classical_design(
         J., Gatelli, D., Saisana, M., & Tarantola, S. (2008). Global
         sensitivity analysis: The primer. John Wiley.
     """
+    # If necessary, set the seed for NumPy.
+    if seed >= 0:
+        np.random.seed(seed)
+
+    def unique_concat(
+        x: NDArray[np.floating], y: NDArray[np.floating]
+    ) -> NDArray[np.floating]:
+        return np.unique(np.concatenate((x, y)), axis=0)
+
+    def only_concat(
+        x: NDArray[np.floating], y: NDArray[np.floating]
+    ) -> NDArray[np.floating]:
+        return np.concatenate((x, y))
+
+    combine_fn = unique_concat if unique else only_concat
+
     # Compute the increment delta based on the number of levels (p).
     delta = _delta(num_levels)
 
@@ -244,9 +272,18 @@ def classical_design(
     # A simple (k+1)-by-k matrix of ones.
     J = np.ones((num_params + 1, num_params))
 
-    # Generate the design matrix of N trajectories.
-    B_star = []
-    for _ in range(num_trajectories):
+    # Generate a dummy trajectory.
+    B_star = np.zeros((1, num_params + 1, num_params)) - 1
+
+    # Start the attempt counter.
+    attempt = 0
+
+    while B_star.shape[0] < (num_trajectories + 1) and attempt < (
+        num_trajectories + max_retries
+    ):
+        # Increment the attempt counter.
+        attempt += 1
+
         # Generate a randomly chosen base value.
         x_star = np.random.choice(
             np.linspace(0, 1 - delta, int(num_levels / 2)), num_params
@@ -267,9 +304,12 @@ def classical_design(
         _b = (delta / 2) * ((2 * B - J) @ D_star + J)
 
         # Append the trajectory to the design matrix.
-        B_star.append(np.matmul(J * x_star + _b, P_star))
+        B_star = combine_fn(
+            B_star, np.matmul(J * x_star + _b, P_star)[None, :, :]
+        )
 
-    return np.asarray(B_star, dtype=float)
+    # Skip the first (dummy) trajectory.
+    return B_star[1:]
 
 
 def radial_design(
