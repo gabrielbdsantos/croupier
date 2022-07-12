@@ -13,6 +13,7 @@ def export_design_to_directory(
     output_dir: PathLike,
     file_prefix: str = "trajectory",
     fmt: str = "%.6f",
+    overwrite: bool = False,
 ) -> None:
     """Export a set of trajectories to individual files in a directory.
 
@@ -38,6 +39,9 @@ def export_design_to_directory(
         A single format, a sequence of formats, or a multi-format
         string, e.g. ‘Iteration %d – %10.5f’, in which case delimiter is
         ignored.
+    overwrite : bool, optional
+        Overwrite existing directory. Use it with caution, as it may
+        lead to incosistent results.
 
     Returns
     -------
@@ -57,7 +61,7 @@ def export_design_to_directory(
     # happen that the user does not have permission to write to the
     # output folder. If this does happen, then throw a PermissionError.
     # If the folder exists, throw a FileExistsError.
-    path.mkdir(parents=True, exist_ok=False)
+    path.mkdir(parents=True, exist_ok=overwrite)
 
     # Total number of trajectories
     num_trajectories = desing_matrix.shape[0]
@@ -83,6 +87,7 @@ def export_design_to_file(
     desing_matrix: NDArray[np.floating],
     output_file: PathLike,
     fmt: str = "%.6f",
+    overwrite: bool = False,
 ) -> None:
     """Export a set of trajectories to individual files in a directory."""
     # Put the output folder name in terms of absolute path.
@@ -93,7 +98,7 @@ def export_design_to_file(
     # output folder. If this does happen, then throw a PermissionError.
     # If the file exists, throw a FileExistsError.
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.touch(exist_ok=False)
+    path.touch(exist_ok=overwrite)
 
     # Total number of trajectories
     num_trajectories = desing_matrix.shape[0]
