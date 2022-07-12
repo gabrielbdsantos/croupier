@@ -92,6 +92,7 @@ def export_design_to_file(
     # happen that the user does not have permission to write to the
     # output folder. If this does happen, then throw a PermissionError.
     # If the file exists, throw a FileExistsError.
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.touch(exist_ok=False)
 
     # Total number of trajectories
