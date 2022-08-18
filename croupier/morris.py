@@ -304,9 +304,7 @@ def classical_design(
         _b = (delta / 2) * ((2 * B - J) @ D_star + J)
 
         # Append the trajectory to the design matrix.
-        B_star = combine_fn(
-            B_star, np.matmul(J * x_star + _b, P_star)[None, :, :]
-        )
+        B_star = combine_fn(B_star, ((J * x_star + _b) @ P_star)[None, :, :])
 
     # Skip the first (dummy) trajectory.
     return B_star[1:]
