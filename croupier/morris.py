@@ -46,9 +46,7 @@ def _delta(num_levels: int) -> float:
 
 
 @numba.njit(parallel=True)
-def _euclidian_distance_matrix(
-    trajectories: NDArray[np.floating],
-) -> NDArray[np.floating]:
+def _euclidian_distance_matrix(trajectories: np.ndarray) -> np.ndarray:
     """Compute the euclidian distance between any two trajectories.
 
     Parameters
@@ -64,7 +62,7 @@ def _euclidian_distance_matrix(
         triangular matrix. The indices (i, j) represent the distance between
         trajectories i and j.
     """
-    # Get the total number of trajectories.
+    # Get the total number of trajectories and the number of parameters.
     num_trajectories = trajectories.shape[0]
 
     # Initialize the distance matrix with zeros.
@@ -79,9 +77,9 @@ def _euclidian_distance_matrix(
 
         # Compute the euclidian distance between trajectories _m and _l, and
         # store the result in the upper triangular matrix.
-        d[_m, _l] = np.sqrt(
-            np.square(trajectories[_m] - trajectories[_l]).sum(axis=1)
-        ).sum()
+        for m in trajectories[_m]:
+            for l in trajectories[_l]:
+                d[_m, _l] += np.sqrt(np.square(m - l).sum())
 
         # Square the euclidian distance between _m and _l, and store the result
         # in the lower triangular matrix.
@@ -101,7 +99,7 @@ def _subset_distance(
 ) -> NDArray[np.floating]:
     """Compute all subsets distances to the original set of distances.
 
-    Following the method proposed by Ge
+    The algorithm follows the method proposed in [1].
 
     Parameters
     ----------
@@ -113,6 +111,13 @@ def _subset_distance(
     np.ndarray
         A one-dimensional array of the distance of all subsets to the
         original matrix.
+
+    References
+    ----------
+    [1] Q. Ge and M. Menendez, “An Efficient Sensitivity Analysis
+        Approach for Computationally Expensive Microscopic Traffic
+        Simulation Models,” IJT, vol. 2, no. 2, pp. 49–64, Aug. 2014,
+        doi: 10.14257/ijt.2014.2.2.04.
     """
     # Get the number of possible subsets.
     num_subsets = distance_matrix.shape[0]
