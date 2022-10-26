@@ -7,9 +7,8 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-numpy = "<1.23"
 scipy = ">1.8"
-numba = "^0.55.2"
+numba = ">=0.55"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
