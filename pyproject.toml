@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "croupier"
 version = "0.0.1-alpha"
-description = "A minimal framework for creating design of experiments"
-authors = ["Gabriel B. Santos <gabriel(dot)bertacco(at)unesp(dot)br>"]
+description = "A minimal sampling framework for the Elementary Effects method"
+authors = ["Gabriel B. Santos <gabriel.bertacco@unesp.br>"]
 license = "MIT"
 
 [tool.poetry.dependencies]

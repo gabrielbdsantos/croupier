@@ -1,6 +1,21 @@
 # Croupier
 
-  > Let a pro handle the odds for you.
+A minimal sampling framework for the Elementary Effects method.
+
+## Install
+
+### Poetry
+
+    $ poetry add git+https://github.com/gabrielbdsantos/croupier.git
+
+### Pip
+
+    $ pip install git+https://github.com/gabrielbdsantos/croupier.git@master
+
+## TODO
+
+  * [ ] Add examples
+  * [ ] Add tests
 
 ## License
 
