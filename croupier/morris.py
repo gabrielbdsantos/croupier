@@ -210,7 +210,7 @@ def quasi_optimized_trajectories(
     return trajectories
 
 
-def classical_design(
+def trajectory_design(
     num_params: int,
     num_levels: int,
     num_trajectories: int = 1,
@@ -218,7 +218,7 @@ def classical_design(
     seed: int = -1,
     max_retries: int = 10000,
 ) -> NDArray[np.floating]:
-    """Generate a design matrix following the classical approach.
+    """Generate a design matrix following the trajectory strategy.
 
     Parameters
     ----------
