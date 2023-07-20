@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "croupier"
-version = "0.0.1-alpha"
-description = "A minimal sampling framework for the Elementary Effects method"
+version = "0.0.1"
+description = "Sampling strategies for the Elementary Effects method"
 authors = ["Gabriel B. Santos <gabriel.bertacco@unesp.br>"]
 license = "MIT"
 

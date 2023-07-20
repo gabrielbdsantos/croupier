@@ -1,6 +1,6 @@
 # Croupier
 
-A minimal sampling framework for the Elementary Effects method.
+Sampling strategies for the Elementary Effects method.
 
 ## Install
 
