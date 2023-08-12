@@ -78,7 +78,7 @@ def _euclidian_distance_matrix(trajectories: np.ndarray) -> np.ndarray:
         # Compute the euclidian distance between trajectories _m and _l, and
         # store the result in the upper triangular matrix.
         for m in trajectories[_m]:
-            for l in trajectories[_l]:
+            for l in trajectories[_l]:  # noqa: E741
                 d[_m, _l] += np.sqrt(np.square(m - l).sum())
 
         # Square the euclidian distance between _m and _l, and store the result
@@ -152,7 +152,7 @@ def quasi_optimized_trajectories(
 
     Parameters
     ----------
-    trajectory : np.ndarray
+    trajectories : np.ndarray
         A set of randomly generated trajectories.
     num_qot : int
         The number of quasi-optimized trajectories to be selected out of
