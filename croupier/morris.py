@@ -329,7 +329,7 @@ def radial_design(
     # distance is defined, it will only return incremental points that
     # introduce a perturbation greater than the given minimal distance.
     # Otherwise, if no minimal distance is defined, the helper function always
-    # return the next incremental points in line.
+    # returns the next incremental points in line.
     def increment(index: int) -> NDArray[np.floating]:
         while np.any(
             np.isclose(
