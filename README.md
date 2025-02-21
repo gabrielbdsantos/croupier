@@ -1,12 +1,12 @@
 # Croupier
 
-Sampling strategies for the Elementary Effects method.
+Collection of sampling strategies for the Elementary Effects method.
 
 ## Install
 
-### Poetry
+### uv
 
-    $ poetry add git+https://github.com/gabrielbdsantos/croupier.git
+    $ uv add git+https://github.com/gabrielbdsantos/croupier.git
 
 ### Pip
 

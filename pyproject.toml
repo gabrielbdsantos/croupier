@@ -1,21 +1,14 @@
-[tool.poetry]
+[project]
 name = "croupier"
-version = "0.0.1"
-description = "Sampling strategies for the Elementary Effects method"
-authors = ["Gabriel B. Santos <gabriel.bertacco@unesp.br>"]
-license = "MIT"
-
-[tool.poetry.dependencies]
-python = ">=3.8,<3.11"
-scipy = ">1.8"
-numba = ">=0.55"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 79
+version = "0.1.0"
+description = "A collection of sampling strategies for the Elementary Effects method"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numba>=0.61.0",
+    "numpy>=2.1.3",
+    "scipy>=1.15.3",
+]
 
 [tool.ruff]
 select = ["E", "F", "D", "I"]

@@ -29,11 +29,10 @@ def _delta(num_levels: int) -> float:
         The number of increment levels is odd. It has been already
         proven that an even number is better, providing an uniform
         distribution of the initial base values.
+
     """
     if num_levels <= 1:
-        raise ValueError(
-            "The number of increment levels should be greater than one."
-        )
+        raise ValueError("The number of increment levels should be greater than one.")
 
     if num_levels % 2 != 0:
         raise RuntimeError(
@@ -61,6 +60,7 @@ def _euclidian_distance_matrix(trajectories: np.ndarray) -> np.ndarray:
         triangular matrix and the squared euclidian distance in the lower
         triangular matrix. The indices (i, j) represent the distance between
         trajectories i and j.
+
     """
     # Get the total number of trajectories and the number of parameters.
     num_trajectories = trajectories.shape[0]
@@ -118,6 +118,7 @@ def _subset_distance(
         Approach for Computationally Expensive Microscopic Traffic
         Simulation Models,” IJT, vol. 2, no. 2, pp. 49–64, Aug. 2014,
         doi: 10.14257/ijt.2014.2.2.04.
+
     """
     # Get the number of possible subsets.
     num_subsets = distance_matrix.shape[0]
@@ -162,6 +163,7 @@ def quasi_optimized_trajectories(
     -------
     np.ndarray
         The set of quasi-optimized trajectories.
+
     """
     # The number of randomly generated trajectories.
     num_trajectories = trajectories.shape[0]
@@ -249,6 +251,7 @@ def trajectory_design(
     [1] Saltelli, A., Ratto, M., Andres, T., Campolongo, F., Cariboni,
         J., Gatelli, D., Saisana, M., & Tarantola, S. (2008). Global
         sensitivity analysis: The primer. John Wiley.
+
     """
     # If necessary, set the seed for NumPy.
     if seed >= 0:
@@ -346,8 +349,5 @@ def radial_design(
     B = np.eye(num_params + 1, num_params, k=-1)
 
     return np.asfarray(
-        [
-            base_points[x] * (J - B) + increment(x) * B
-            for x in range(num_trajectories)
-        ]
+        [base_points[x] * (J - B) + increment(x) * B for x in range(num_trajectories)]
     )
