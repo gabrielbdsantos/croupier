@@ -11,4 +11,5 @@ dependencies = [
 ]
 
 [tool.ruff]
+line-length = 79
 select = ["E", "F", "D", "I"]

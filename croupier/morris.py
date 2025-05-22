@@ -32,7 +32,9 @@ def _delta(num_levels: int) -> float:
 
     """
     if num_levels <= 1:
-        raise ValueError("The number of increment levels should be greater than one.")
+        raise ValueError(
+            "The number of increment levels should be greater than one."
+        )
 
     if num_levels % 2 != 0:
         raise RuntimeError(
@@ -349,5 +351,8 @@ def radial_design(
     B = np.eye(num_params + 1, num_params, k=-1)
 
     return np.asfarray(
-        [base_points[x] * (J - B) + increment(x) * B for x in range(num_trajectories)]
+        [
+            base_points[x] * (J - B) + increment(x) * B
+            for x in range(num_trajectories)
+        ]
     )
