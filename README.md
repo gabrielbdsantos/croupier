@@ -20,4 +20,4 @@ Collection of sampling strategies for the Elementary Effects method.
 ## License
 
 Croupier is licensed under the MIT license. For further information see the
-[LICENSE](./LICENSE)
+[LICENSE](./LICENSE).

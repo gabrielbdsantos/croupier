@@ -1,5 +1,36 @@
 # coding: utf-8
-"""Define sampling strategies for the Elementary Effects Method."""
+"""Define sampling strategies for the Elementary Effects Method.
+
+It implements basically two sampling strategies: the quasi-optimized and the
+radial sampling.
+
+References
+----------
+[1] Saltelli, A., Ratto, M., Andres, T., Campolongo, F., Cariboni,
+    J., Gatelli, D., Saisana, M., & Tarantola, S. (2008). Global
+    sensitivity analysis: The primer. John Wiley.
+
+[2] F. Campolongo, J. Cariboni, and A. Saltelli, “An effective screening
+    design for sensitivity analysis of large models,” Environmental
+    Modelling & Software, vol. 22, no. 10, pp. 1509–1518, Oct. 2007,
+    doi: 10.1016/j.envsoft.2006.10.004.
+
+[3] F. Campolongo, A. Saltelli, and J. Cariboni, “From screening to
+    quantitative sensitivity analysis. A unified approach,” Computer
+    Physics Communications, vol. 182, no. 4, pp. 978–988, Apr. 2011,
+    doi: 10.1016/j.cpc.2010.12.039.
+
+[4] Q. Ge and M. Menendez, “An Efficient Sensitivity Analysis Approach
+    for Computationally Expensive Microscopic Traffic Simulation
+    Models,” IJT, vol. 2, no. 2, pp. 49–64, Aug. 2014,
+    doi: 10.14257/ijt.2014.2.2.04.
+
+[5] G. B. Santos, A. V. Pantaleão, and L. O. Salviano, “Using deep
+    generative adversarial network to explore novel airfoil designs for
+    vertical-axis wind turbines,” Energy Conversion and Management, vol.
+    282, p. 116849, Apr. 2023, doi: 10.1016/j.enconman.2023.116849.
+
+"""
 
 from typing import Generator
 
@@ -27,7 +58,7 @@ def _delta(num_levels: int) -> float:
         The number of increment levels should be greater than zero.
     RuntimeError
         The number of increment levels is odd. It has been already
-        proven that an even number is better, providing an uniform
+        proven that an even number is better, providing a uniform
         distribution of the initial base values.
 
     """
@@ -47,19 +78,21 @@ def _delta(num_levels: int) -> float:
 
 
 @numba.njit(parallel=True)
-def _euclidian_distance_matrix(trajectories: np.ndarray) -> np.ndarray:
-    """Compute the euclidian distance between any two trajectories.
+def _euclidian_distance_matrix(
+    trajectories: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Compute the Euclidian distance between pairs of trajectories in a set.
 
     Parameters
     ----------
-    trajectories : np.ndarray
+    trajectories : numpy.ndarray
         The array of trajectories.
 
     Returns
     -------
-    np.ndarray
-        The distance matrix, which stores the euclidian distance in the upper
-        triangular matrix and the squared euclidian distance in the lower
+    numpy.ndarray
+        The distance matrix, which stores the Euclidian distance in the upper
+        triangular matrix and the squared Euclidian distance in the lower
         triangular matrix. The indices (i, j) represent the distance between
         trajectories i and j.
 
@@ -77,20 +110,20 @@ def _euclidian_distance_matrix(trajectories: np.ndarray) -> np.ndarray:
     for i in numba.prange(m_indices.shape[0]):
         _m, _l = m_indices[i], l_indices[i]
 
-        # Compute the euclidian distance between trajectories _m and _l, and
+        # Compute the Euclidean distance between trajectories _m and _l, and
         # store the result in the upper triangular matrix.
         for m in trajectories[_m]:
             for l in trajectories[_l]:  # noqa: E741
                 d[_m, _l] += np.sqrt(np.square(m - l).sum())
 
-        # Square the euclidian distance between _m and _l, and store the result
+        # Square the Euclidean distance between _m and _l, and store the result
         # in the lower triangular matrix.
         d[_l, _m] = d[_m, _l] * d[_m, _l]
 
-    # Return the distance matrix containing both the euclidian distance in the
-    # upper triangular matrix and the squared euclidian distance in the lower
-    # triangular matrix. Even though the method proposed by Campolong et. al.
-    # only uses the squared euclidian distance from now on, the function
+    # Return the distance matrix containing both the Euclidean distance in the
+    # upper triangular matrix and the squared Euclidean distance in the lower
+    # triangular matrix. Even though the method proposed by Campolongo et al.
+    # (2007) only uses the squared Euclidean distance from now on, the function
     # returns both values, envisioning future usage.
     return d
 
@@ -105,13 +138,13 @@ def _subset_distance(
 
     Parameters
     ----------
-    distance_matrix : np.ndarray
+    distance_matrix : numpy.ndarray
         The distance matrix or the original set.
 
     Returns
     -------
-    np.ndarray
-        A one-dimensional array of the distance of all subsets to the
+    numpy.ndarray
+        A one-dimensional array of the distances of all subsets to the
         original matrix.
 
     References
@@ -130,11 +163,11 @@ def _subset_distance(
 
     # Compute the influence
     for i in numba.prange(num_subsets):
-        # Initiate a null matrix for using as maked indices.
+        # Initiate a null matrix to use as masked indices.
         masked_indices = np.zeros((num_subsets, num_subsets))
 
-        # Select the row and column corresponding to i, and set
-        # the value to one.
+        # Select the row and column corresponding to i, and set its value to
+        # one.
         for j in numba.prange(i):
             masked_indices[i, j] = 1
 
@@ -151,11 +184,13 @@ def _subset_distance(
 def quasi_optimized_trajectories(
     trajectories: NDArray[np.floating], num_qot: int
 ) -> NDArray[np.floating]:
-    """Find the set of quasi-optimal trajectories.
+    """Find the set of quasi-optimized trajectories.
+
+    The algorithm follows the method proposed in [1].
 
     Parameters
     ----------
-    trajectories : np.ndarray
+    trajectories : numpy.ndarray
         A set of randomly generated trajectories.
     num_qot : int
         The number of quasi-optimized trajectories to be selected out of
@@ -163,8 +198,15 @@ def quasi_optimized_trajectories(
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         The set of quasi-optimized trajectories.
+
+    References
+    ----------
+    [1] Q. Ge and M. Menendez, “An Efficient Sensitivity Analysis
+        Approach for Computationally Expensive Microscopic Traffic
+        Simulation Models,” IJT, vol. 2, no. 2, pp. 49–64, Aug. 2014,
+        doi: 10.14257/ijt.2014.2.2.04.
 
     """
     # The number of randomly generated trajectories.
@@ -187,11 +229,11 @@ def quasi_optimized_trajectories(
 
     # The following for-loop cannot be executed in parallel.
     for _ in numba.prange(num_iterations):
-        # Select the trajectory that contributes the less to the total
+        # Select the trajectory that contributes the least to the total
         # distance, and mark it to be deleted.
         to_delete = np.where(Ds_p == Ds_p.min())[0][0]
 
-        # Deduct the contribution of the least influential trajectory on the
+        # Deduct the contribution of the least influential trajectory from the
         # subset distance of other trajectories.
         for j in numba.prange(to_delete):
             Ds_p[j] = Ds_p[j] - Ds[to_delete, j]
@@ -203,10 +245,12 @@ def quasi_optimized_trajectories(
         Ds = np.vstack((Ds[:to_delete], Ds[to_delete + 1 :]))
         Ds = np.hstack((Ds[:, :to_delete], Ds[:, to_delete + 1 :]))
 
-        # Remove the least influential trajectory from the subset distance matrix.
+        # Remove the least influential trajectory from the subset distance
+        # matrix.
         Ds_p = np.hstack((Ds_p[:to_delete], Ds_p[to_delete + 1 :]))
 
-        # Exclude the least influential trajectory from the list of trajectories.
+        # Exclude the least influential trajectory from the list of
+        # trajectories.
         trajectories = np.vstack(
             (trajectories[:to_delete], trajectories[to_delete + 1 :])
         )
@@ -227,7 +271,7 @@ def trajectory_design(
     Parameters
     ----------
     num_params : int
-        The number of parameters (k) defining the problem.
+        The number of parameters (k).
     num_levels : int
         The number of equally spaced increment levels (p).
     num_trajectories : int, optional
@@ -242,7 +286,7 @@ def trajectory_design(
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         The design matrix.
 
     Notes
@@ -255,7 +299,7 @@ def trajectory_design(
         sensitivity analysis: The primer. John Wiley.
 
     """
-    # If necessary, set the seed for NumPy.
+    # Set NumPy's seed.
     if seed >= 0:
         np.random.seed(seed)
 
@@ -275,7 +319,7 @@ def trajectory_design(
     delta = _delta(num_levels)
 
     # A (k+1)-by-k matrix of zeros and ones, in which there are only two rows
-    # that differ in the jth element. A convenient choice for B is a strictly
+    # that differ in their jth element. A convenient choice for B is a strictly
     # lower triangular matrix of ones.
     B = np.tril(np.ones((num_params + 1, num_params)), -1)
 
@@ -306,7 +350,7 @@ def trajectory_design(
 
         # A k-by-k random permutation matrix in which each row contains one
         # element equal to 1, all others are 0, and no two rows have ones in
-        # the same columns. The matrix gives the order in which factors are
+        # the same column. The matrix gives the order in which factors are
         # moved by shuffling the values of an identity matrix of size k-by-k.
         np.random.shuffle(P_star := np.eye(num_params, num_params))
 
@@ -325,15 +369,27 @@ def radial_design(
     incremental_points: Generator[NDArray[np.floating], None, None],
     min_distance: float = 0.0,
 ):
-    """Define a generic strategy for radial-like trajectory designs."""
-    # Extract the number of trajectories and the number of parameters from the
+    """Define a generic strategy for radial-like trajectory designs.
+
+    Parameters
+    ----------
+    base_points
+        Anchor points from which trajectories are created.
+    incremental_points
+        An array of incremental points.
+    min_distance : optional
+        Minimum distance between `base_points` and `incremental_points`.
+        Defaults to 0.0.
+
+    """
+    # Get the number of trajectories and the number of parameters from the
     # matrix of base points.
     num_trajectories, num_params = base_points.shape
 
-    # Helper function to evaluate the distance between two points. If a minimal
-    # distance is defined, it will only return incremental points that
-    # introduce a perturbation greater than the given minimal distance.
-    # Otherwise, if no minimal distance is defined, the helper function always
+    # Helper function that evaluates the distance between two points. If a
+    # minimum distance is defined, it will only return incremental points that
+    # introduce a perturbation greater than the given minimum distance.
+    # Otherwise, if no minimum distance is defined, the helper function always
     # returns the next incremental points in line.
     def increment(index: int) -> NDArray[np.floating]:
         while np.any(
