@@ -14,7 +14,7 @@ Collection of sampling strategies for the Elementary Effects method.
 
 ## TODO
 
-  * [ ] Add examples
+  * [x] Add examples
   * [ ] Add tests
 
 ## License

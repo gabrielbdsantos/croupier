@@ -406,7 +406,7 @@ def radial_design(
     J = np.ones((num_params + 1, num_params))
     B = np.eye(num_params + 1, num_params, k=-1)
 
-    return np.asfarray(
+    return np.asarray(
         [
             base_points[x] * (J - B) + increment(x) * B
             for x in range(num_trajectories)
